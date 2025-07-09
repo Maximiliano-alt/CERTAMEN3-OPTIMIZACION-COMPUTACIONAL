@@ -2,30 +2,37 @@ import random, math, numpy as np
 
 class Problem:
     def __init__(self):
-        # Problema de mezcla publicitaria con 5 variables
-        self.dim = 5
-        # Dominios: x1(0-15), x2(0-10), x3(0-25), x4(0-4), x5(0-30)
-        self.min_values = [0, 0, 0, 0, 0]
-        self.max_values = [15, 10, 25, 4, 30]
+        # Problema extendido: [x1,x2,x3,x4,x5, q1,q2,q3,q4,q5]
+        self.dim = 10
         
-        # Costos unitarios a calidad máxima
-        self.costs = [200, 350, 80, 120, 20]   # c1, c2, c3, c4, c5
-        
-        # Calidades a q_max (simplificado)
-        self.qualities = [85, 95, 60, 80, 30]  # q1, q2, q3, q4, q5
+        # Dominios para x_i: [0-15], [0-10], [0-25], [0-4], [0-30]
+        # Dominios para q_i: [65-85], [90-95], [40-60], [60-80], [20-30]
+        self.min_values = [0, 0, 0, 0, 0, 65, 90, 40, 60, 20]
+        self.max_values = [15, 10, 25, 4, 30, 85, 95, 60, 80, 30]
+
+    def get_costs(self, q):
+        """Calcular costos c_i a partir de calidades q_i"""
+        c1 = 2 * q[0] + 30      # c1 = 2*q1 + 30
+        c2 = 10 * q[1] - 600    # c2 = 10*q2 - 600
+        c3 = 2 * q[2] - 40      # c3 = 2*q3 - 40
+        c4 = q[3] + 40          # c4 = q4 + 40
+        c5 = q[4] - 10          # c5 = q5 - 10
+        return [c1, c2, c3, c4, c5]
 
     def check(self, x):
-        """Verificar que la solución respete las tres restricciones presupuestarias"""
-        c1, c2, c3, c4, c5 = self.costs
+        """Verificar restricciones usando costos calculados dinámicamente"""
+        # Extraer x_i y q_i
+        x_vars = x[:5]  # x1, x2, x3, x4, x5
+        q_vars = x[5:]  # q1, q2, q3, q4, q5
         
-        # TV: 200·x1 + 350·x2 ≤ 3800
-        tv_budget = c1 * x[0] + c2 * x[1] <= 3800
+        # Calcular costos c_i
+        costs = self.get_costs(q_vars)
+        c1, c2, c3, c4, c5 = costs
         
-        # Diario+Revista: 80·x3 + 120·x4 ≤ 2800  
-        diario_revista = c3 * x[2] + c4 * x[3] <= 2800
-        
-        # Diario+Radio: 80·x3 + 20·x5 ≤ 3500
-        diario_radio = c3 * x[2] + c5 * x[4] <= 3500
+        # Verificar restricciones presupuestarias
+        tv_budget = c1 * x_vars[0] + c2 * x_vars[1] <= 3800
+        diario_revista = c3 * x_vars[2] + c4 * x_vars[3] <= 2800
+        diario_radio = c3 * x_vars[2] + c5 * x_vars[4] <= 3500
         
         return tv_budget and diario_revista and diario_radio
 
@@ -34,18 +41,26 @@ class Problem:
         if not self.check(x):
             return -1e9  # Penalización por infactibilidad
             
+        # Extraer x_i y q_i
+        x_vars = x[:5]  # x1, x2, x3, x4, x5
+        q_vars = x[5:]  # q1, q2, q3, q4, q5
+        
         # Calcular calidad total Q
-        Q = sum(self.qualities[i] * x[i] for i in range(self.dim))
+        Q = sum(q_vars[i] * x_vars[i] for i in range(5))
         
         # Calcular costo total C
-        C = sum(self.costs[i] * x[i] for i in range(self.dim))
+        costs = self.get_costs(q_vars)
+        C = sum(costs[i] * x_vars[i] for i in range(5))
         
         return Q - C
 
     def keep_domain(self, idx, val):
         """Redondear y recortar valor al rango válido para la variable idx"""
         lo, hi = self.min_values[idx], self.max_values[idx]
-        return int(max(lo, min(hi, round(val))))
+        if idx < 5:  # Variables x_i (enteras)
+            return int(max(lo, min(hi, round(val))))
+        else:  # Variables q_i (reales)
+            return max(lo, min(hi, val))
 
 class Individual:
     def __init__(self, problem):
@@ -55,7 +70,10 @@ class Individual:
         # Generar solución inicial aleatoria en los dominios válidos
         self.x = []
         for i in range(self.dimension):
-            self.x.append(random.randint(self.p.min_values[i], self.p.max_values[i]))
+            if i < 5:  # Variables x_i (enteras)
+                self.x.append(random.randint(self.p.min_values[i], self.p.max_values[i]))
+            else:  # Variables q_i (reales)
+                self.x.append(random.uniform(self.p.min_values[i], self.p.max_values[i]))
 
     def is_feasible(self):
         """Verificar si la solución cumple las restricciones"""
@@ -197,36 +215,46 @@ class Swarm:
         print("RESULTADOS FINALES - GGO (Greylag Goose Optimization)")
         print("="*60)
         
-        best_x = self.best_global.x
-        print(f"Mejor solución x: {best_x}")
+        best_solution = self.best_global.x
+        best_x = best_solution[:5]  # x1, x2, x3, x4, x5
+        best_q = best_solution[5:]  # q1, q2, q3, q4, q5
+        
+        print(f"Mejores x: {best_x}")
+        print(f"Mejores q: {[round(q, 2) for q in best_q]}")
         
         # Calcular componentes separadamente
-        Q = sum(self.p.qualities[i] * best_x[i] for i in range(self.p.dim))
-        C = sum(self.p.costs[i] * best_x[i] for i in range(self.p.dim))
+        Q = sum(best_q[i] * best_x[i] for i in range(5))
+        costs = self.p.get_costs(best_q)
+        C = sum(costs[i] * best_x[i] for i in range(5))
         Z = Q - C
         
-        print(f"Calidad total Q: {Q}")
-        print(f"Costo total C: {C}")
-        print(f"Función objetivo Z (Q-C): {Z}")
+        print(f"Calidad total Q: {Q:.2f}")
+        print(f"Costo total C: {C:.2f}")
+        print(f"Función objetivo Z (Q-C): {Z:.2f}")
         
         # Verificar restricciones
+        print(f"\nCostos unitarios calculados:")
+        for i, c in enumerate(costs, 1):
+            print(f"c{i}: {c:.2f}")
+        
         print(f"\nVerificación de restricciones:")
-        tv_used = self.p.costs[0]*best_x[0] + self.p.costs[1]*best_x[1]
-        dr_used = self.p.costs[2]*best_x[2] + self.p.costs[3]*best_x[3]
-        drad_used = self.p.costs[2]*best_x[2] + self.p.costs[4]*best_x[4]
+        tv_used = costs[0]*best_x[0] + costs[1]*best_x[1]
+        dr_used = costs[2]*best_x[2] + costs[3]*best_x[3]
+        drad_used = costs[2]*best_x[2] + costs[4]*best_x[4]
         
-        print(f"TV: {tv_used}/3800 ({'✓' if tv_used <= 3800 else '✗'})")
-        print(f"Diario+Revista: {dr_used}/2800 ({'✓' if dr_used <= 2800 else '✗'})")
-        print(f"Diario+Radio: {drad_used}/3500 ({'✓' if drad_used <= 3500 else '✗'})")
+        print(f"TV: {tv_used:.2f}/3800 ({'✓' if tv_used <= 3800 else '✗'})")
+        print(f"Diario+Revista: {dr_used:.2f}/2800 ({'✓' if dr_used <= 2800 else '✗'})")
+        print(f"Diario+Radio: {drad_used:.2f}/3500 ({'✓' if drad_used <= 3500 else '✗'})")
         
-        print(f"\nCurva de convergencia (primeros 10 valores): {self.best_curve[:10]}")
-        print(f"Valor final: {self.best_curve[-1]}")
+        print(f"\nCurva de convergencia (primeros 10 valores): {[round(x, 2) for x in self.best_curve[:10]]}")
+        print(f"Valor final: {self.best_curve[-1]:.2f}")
 
     def optimizer(self):
         """Método principal del algoritmo"""
         print("Iniciando GGO (Greylag Goose Optimization)...")
         print(f"Población: {self.n_individual}, Iteraciones: {self.max_iter}")
         print(f"Grupos: {self.n_groups}, Tamaño grupo: {self.group_size}")
+        print("Problema extendido: [x1,x2,x3,x4,x5, q1,q2,q3,q4,q5]")
         
         self.initialize_population()
         print(f"Mejor inicial: Z={self.best_global.fitness():.2f}")
