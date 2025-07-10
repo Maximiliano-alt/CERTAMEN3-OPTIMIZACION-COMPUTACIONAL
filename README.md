@@ -45,6 +45,46 @@ Optimización de la distribución de anuncios en 5 medios diferentes:
 | `optimizacion_certamen_final-2.pdf`   | Material de examen y evaluación                |
 | `1-s2.0-S0957417423026490-main-2.pdf` | Paper académico de referencia                  |
 
+### 🔗 Análisis y Visualización
+
+| Archivo                | Descripción                               | Salida                           |
+| ---------------------- | ----------------------------------------- | -------------------------------- |
+| `pareto_analysis.py`   | **Análisis de Frontera de Pareto**        | Genera `pareto_ggo.png`          |
+| `proyeccion_pareto.py` | **Proyecciones Detalladas de Soluciones** | Genera `proyecciones_pareto.png` |
+
+## 🛠️ Herramientas y Dependencias
+
+### Lenguaje Principal
+
+- **Python 3.7+** - Lenguaje de programación principal
+
+### Librerías Científicas
+
+- **NumPy** - Operaciones numéricas y manipulación de arrays
+- **Matplotlib** - Visualización de datos y generación de gráficos
+- **Pandas** (opcional) - Manipulación y análisis de datos
+
+### Librerías Estándar
+
+- **random** - Generación de números aleatorios
+- **math** - Funciones matemáticas básicas
+- **collections** - Estructuras de datos especializadas (deque para AC-3)
+
+### Instalación de Dependencias
+
+```bash
+pip install numpy matplotlib pandas
+```
+
+### Estructura de Dependencias
+
+```
+proyecto/
+├── numpy >= 1.19.0    # Operaciones matriciales y vectoriales
+├── matplotlib >= 3.3.0 # Gráficos y visualizaciones
+└── python >= 3.7      # Compatibilidad con f-strings y type hints
+```
+
 ## 🚀 Uso
 
 ### Ejecutar GGO (Algoritmo Principal)
